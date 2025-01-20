@@ -1,0 +1,70 @@
+version: "3.8"
+services:
+  rule_engine:
+    build:
+      context: ./rule_engine
+    container_name: rule_engine
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+    depends_on:
+      - mongo
+      - rabbitmq
+
+
+  controller:
+    build:
+      context: ./controller
+    container_name: controller
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+    depends_on:
+      - mongo
+      - rabbitmq
+      - rule_engine
+
+  datasim:
+    build:
+      context: ./datasim
+    container_name: datasim
+    environment:
+      - DEVICES_NUM=10
+      - QUERIES_SEC=2
+    depends_on:
+      - controller
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: "rabbitmq"
+    ports:
+      - "5672:5672"  # Порт для взаимодействия с RabbitMQ
+      - "15672:15672"  # Web UI для управления
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+
+  mongo:
+    image: mongo:5.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  mongo-express:
+    image: mongo-express:1.0.0-alpha.4
+    container_name: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:

@@ -1,0 +1,8 @@
+# build and run
+sudo docker compose up --build
+
+# connect to compass
+http://localhost:8081
+
+# see rabit
+http://localhost:15672 user password
