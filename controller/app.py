@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, Response
+import logging
 import json
 # from pymongo import MongoClient
 import asyncio
@@ -14,6 +15,23 @@ RABBIT_TASK_QUEUE_NAME = "queue"
 # db = client["mydatabase"]
 # collection = db["data"]
 
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        record_dict = {
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "time": self.formatTime(record),
+            "module": record.module,
+            "name": record.name,
+        }
+        return json.dumps(record_dict)
+
+logger = logging.getLogger("controller_logger")
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
 app = FastAPI()
 
 async def send_message(json_body):
@@ -26,12 +44,12 @@ async def send_message(json_body):
             routing_key=RABBIT_TASK_QUEUE_NAME,
             body=json_body)
 
-        print(f"Sent: {json_body}")
+        logger.info(f"Sent message: {json_body}")
 
         await connection.close()
 
     except aiormq.AMQPConnectionError as e:
-        print("Error while connecting to rabbit")
+        logger.error("Error while connecting to RabbitMQ", exc_info=e)
         await asyncio.sleep(2)
 
 @app.post("/api/data")
@@ -43,7 +61,7 @@ async def receive_data(request: Request):
     response.status_code = 200
 
     if d["A"] < 2:
-        print(f"{d} droped")
+        logger.warning(f"Data dropped: {d}")
         return response
 
     # idk do we need to store something from this service ?
@@ -52,7 +70,7 @@ async def receive_data(request: Request):
 
     await send_message(json_data)
 
-    print(f"{d} forwarded")
+    logger.info(f"Data forwarded: {d}")
     return response
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import asyncio
 import aiormq
 import json
 import os
+import logging
 
 RABBITMQ_URL = "amqp://user:password@rabbitmq/"
 RABBIT_TASK_QUEUE_NAME = "queue"
@@ -12,6 +13,22 @@ client = MongoClient(MONGO_URI)
 db = client["mydatabase"]
 collection = db["data"]
 
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        record_dict = {
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "time": self.formatTime(record),
+            "module": record.module,
+            "name": record.name,
+        }
+        return json.dumps(record_dict)
+
+logger = logging.getLogger("rule_engine_logger")
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class RuleMatcher():
     def __init__(self):
@@ -55,18 +72,18 @@ THE_GREAT_MATCHER = RuleMatcher()
 
 async def on_message(message):
     message_dict = json.loads(message.body.decode())
-    print(f"Received: {message_dict}")
+    logger.info(f"Received message: {message_dict}")
 
     device_id = message_dict["device"]
     match = THE_GREAT_MATCHER.match_rule(message_dict)
 
     if (match[0]):
         collection.insert_one({"device": device_id, "rule": match[1]})
-        print(f"Inserted instant rule for: {device_id}")
+        logger.info(f"Inserted instant rule for device {device_id}")
 
     if (match[2]):
         collection.insert_one({"device": device_id, "rule": match[3]})
-        print(f"Inserted ongoing rule for: {device_id}")
+        logger.info(f"Inserted ongoing rule for device {device_id}")
 
 
 async def consume_messages():
@@ -82,7 +99,7 @@ async def consume_messages():
             break
 
         except aiormq.AMQPConnectionError as e:
-            print("Error while connecting to rabbit")
+            logger.error("Error while connecting to RabbitMQ", exc_info=e)
             await asyncio.sleep(2)
 
 
