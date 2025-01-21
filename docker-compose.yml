@@ -16,7 +16,7 @@ services:
       context: ./controller
     container_name: controller
     ports:
-      - "5000:5000"
+      - "8000:5000"
     environment:
       - MONGO_URI=mongodb://mongo:27017
     depends_on:
@@ -84,7 +84,7 @@ services:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     ports:
       - "5044:5044"
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
       - elasticsearch
 
