@@ -81,10 +81,10 @@ services:
     image: docker.elastic.co/logstash/logstash:7.17.0
     container_name: logstash
     volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     ports:
       - "5044:5044"
-      - "5001:5000"
+      - "9600:9600"
     depends_on:
       - elasticsearch
 
@@ -102,13 +102,13 @@ services:
     image: docker.elastic.co/beats/filebeat:7.17.0
     container_name: filebeat
     volumes:
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - logs_storage:/var/log
     depends_on:
       - logstash
 volumes:
   mongo_data:
   elastic_data:
+  logs_storage:
 
   

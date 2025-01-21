@@ -6,22 +6,12 @@ import asyncio
 import aiohttp
 import logging
 
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        record_dict = {
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "time": self.formatTime(record),
-            "module": record.module,
-            "name": record.name,
-        }
-        return json.dumps(record_dict)
-
-logger = logging.getLogger("datasim_logger")
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    filename='/var/log/datasim.log',
+    level=logging.INFO,
+    format='%(name)s - %(levelname)s - %(message)s',
+    filemode='a'
+)
 
 # service settings
 SERVER_URL  = "http://controller:5000/api/data"
@@ -36,7 +26,7 @@ async def gen_message(start_time, this_task_ind):
     global SERVER_URL
 
     if time.time_ns() - start_time >= MAX_TIME_DIFF:
-        logger.warning(f"Task {this_task_ind}: Not enough time")
+        logging.warning(f"Task {this_task_ind}: Not enough time")
         return
 
     async with aiohttp.ClientSession() as session:
@@ -45,14 +35,14 @@ async def gen_message(start_time, this_task_ind):
                 "A": random.randint(1, 10),
                 "timestamp": time.time()
                 }
-        logger.info(f"Task {this_task_ind}: Sending data: {data}")
+        logging.info(f"Task {this_task_ind}: Sending data: {data}")
 
         try:
             async with session.post(SERVER_URL, json=data) as response:
-                logger.info(f"Task {this_task_ind}: Response {response.status}")
+                logging.info(f"Task {this_task_ind}: Response {response.status}")
 
         except Exception as e:
-            logger.error(f"Task {this_task_ind}: Error", exc_info=e)
+            logging.error(f"Task {this_task_ind}: Error", exc_info=e)
 
 async def main():
     global MAX_TIME_DIFF
@@ -72,7 +62,7 @@ async def main():
         time_to_wait = MAX_TIME_DIFF - (time.time_ns() - start_time)
 
         if time_to_wait > 0:
-            logger.info(f"Sleeping {time_to_wait} nanoseconds")
+            logging.info(f"Sleeping {time_to_wait} nanoseconds")
             await asyncio.sleep(time_to_wait / 1_000_000_000)
 
 
